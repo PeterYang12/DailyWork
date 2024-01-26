@@ -1,0 +1,69 @@
+diff --git a/Zend/zend_string.h b/Zend/zend_string.h
+index 910e2eed25..5124d8d35c 100644
+--- a/Zend/zend_string.h
++++ b/Zend/zend_string.h
+@@ -459,9 +459,20 @@ static zend_always_inline bool zend_string_starts_with_ci(const zend_string *str
+  *                  -- Ralf S. Engelschall <rse@engelschall.com>
+  */
+ 
++#include <immintrin.h>
+ static zend_always_inline zend_ulong zend_inline_hash_func(const char *str, size_t len)
+ {
+ 	zend_ulong hash = Z_UL(5381);
++	__m512i vectorizedConst = _mm512_set_epi64(
++        33*33*33*33*33*33*33UL,
++        33*33*33*33*33*33UL,
++        33*33*33*33*33UL,
++        33*33*33*33UL,
++        33*33*33UL,
++        33*33UL,
++        33UL,
++        1UL
++    );
+ 
+ #if defined(_WIN32) || defined(__i386__) || defined(__x86_64__) || defined(__aarch64__)
+ 	/* Version with multiplication works better on modern CPU */
+@@ -485,18 +496,31 @@ static zend_always_inline zend_ulong zend_inline_hash_func(const char *str, size
+ 			((chunk >> (8 * 6)) & 0xff) * 33 +
+ 			((chunk >> (8 * 7)) & 0xff);
+ # else
+-		hash =
+-			hash   * Z_L(33 * 33 * 33 * 33) +
+-			str[0] * Z_L(33 * 33 * 33) +
+-			str[1] * Z_L(33 * 33) +
+-			str[2] * Z_L(33) +
+-			str[3];
+-		hash =
+-			hash   * Z_L(33 * 33 * 33 * 33) +
+-			str[4] * Z_L(33 * 33 * 33) +
+-			str[5] * Z_L(33 * 33) +
+-			str[6] * Z_L(33) +
+-			str[7];
++		// hash =
++		// 	hash   * Z_L(33 * 33 * 33 * 33) +
++		// 	str[0] * Z_L(33 * 33 * 33) +
++		// 	str[1] * Z_L(33 * 33) +
++		// 	str[2] * Z_L(33) +
++		// 	str[3];
++		// hash =
++		// 	hash   * Z_L(33 * 33 * 33 * 33) +
++		// 	str[4] * Z_L(33 * 33 * 33) +
++		// 	str[5] * Z_L(33 * 33) +
++		// 	str[6] * Z_L(33) +
++		// 	str[7];
++		__m512i vectorizedStr = _mm512_set_epi64(
++				(uint64_t)str[0],
++				(uint64_t)str[1],
++				(uint64_t)str[2],
++				(uint64_t)str[3],
++				(uint64_t)str[4],
++				(uint64_t)str[5],
++				(uint64_t)str[6],
++				(uint64_t)str[7]
++			);
++		__m512i result1 = _mm512_mullo_epi64(vectorizedStr, vectorizedConst);
++		// Accumulate the elements of the result vector
++		hash = _mm512_reduce_add_epi64(result1) + hash*33*33*33*33*33*33*33*33UL;
+ # endif
+ 	}
+ 	if (len >= 4) {

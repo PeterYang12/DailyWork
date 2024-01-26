@@ -1,0 +1,13 @@
+diff --git a/Zend/zend_hash.c b/Zend/zend_hash.c
+index 6668c4c17c..e9430a7445 100644
+--- a/Zend/zend_hash.c
++++ b/Zend/zend_hash.c
+@@ -742,7 +742,7 @@ static zend_always_inline Bucket *zend_hash_find_bucket(const HashTable *ht, con
+ 	nIndex = ZSTR_H(key) | ht->nTableMask;
+ 	idx = HT_HASH_EX(arData, nIndex);
+ 
+-	if (UNEXPECTED(idx == HT_INVALID_IDX)) {
++	if (EXPECTED(idx == HT_INVALID_IDX)) {
+ 		return NULL;
+ 	}
+ 	p = HT_HASH_TO_BUCKET_EX(arData, idx);

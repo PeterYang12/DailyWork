@@ -1,0 +1,13 @@
+diff --git a/Zend/zend_hash.c b/Zend/zend_hash.c
+index 6668c4c17c..1b42d07323 100644
+--- a/Zend/zend_hash.c
++++ b/Zend/zend_hash.c
+@@ -746,7 +746,7 @@ static zend_always_inline Bucket *zend_hash_find_bucket(const HashTable *ht, con
+ 		return NULL;
+ 	}
+ 	p = HT_HASH_TO_BUCKET_EX(arData, idx);
+-	if (EXPECTED(p->key == key)) { /* check for the same interned string */
++	if (UNEXPECTED(p->key == key)) { /* check for the same interned string */
+ 		return p;
+ 	}
+ 

@@ -1,0 +1,72 @@
+diff --git a/Zend/zend_string.h b/Zend/zend_string.h
+index 910e2eed25..6627928522 100644
+--- a/Zend/zend_string.h
++++ b/Zend/zend_string.h
+@@ -459,9 +459,18 @@ static zend_always_inline bool zend_string_starts_with_ci(const zend_string *str
+  *                  -- Ralf S. Engelschall <rse@engelschall.com>
+  */
+ 
++#include <immintrin.h>
+ static zend_always_inline zend_ulong zend_inline_hash_func(const char *str, size_t len)
+ {
+ 	zend_ulong hash = Z_UL(5381);
++	__m256i vectorizedConst = _mm256_set_epi64x(
++        33*33*33UL,
++        33*33UL,
++        33UL,
++        1UL
++    );
++	__m256i mul_result1;
++	__m256i mul_result2;
+ 
+ #if defined(_WIN32) || defined(__i386__) || defined(__x86_64__) || defined(__aarch64__)
+ 	/* Version with multiplication works better on modern CPU */
+@@ -485,18 +494,36 @@ static zend_always_inline zend_ulong zend_inline_hash_func(const char *str, size
+ 			((chunk >> (8 * 6)) & 0xff) * 33 +
+ 			((chunk >> (8 * 7)) & 0xff);
+ # else
+-		hash =
+-			hash   * Z_L(33 * 33 * 33 * 33) +
+-			str[0] * Z_L(33 * 33 * 33) +
+-			str[1] * Z_L(33 * 33) +
+-			str[2] * Z_L(33) +
+-			str[3];
+-		hash =
+-			hash   * Z_L(33 * 33 * 33 * 33) +
+-			str[4] * Z_L(33 * 33 * 33) +
+-			str[5] * Z_L(33 * 33) +
+-			str[6] * Z_L(33) +
+-			str[7];
++		// hash =
++		// 	hash   * Z_L(33 * 33 * 33 * 33) +
++		// 	str[0] * Z_L(33 * 33 * 33) +
++		// 	str[1] * Z_L(33 * 33) +
++		// 	str[2] * Z_L(33) +
++		// 	str[3];
++		// hash =
++		// 	hash   * Z_L(33 * 33 * 33 * 33) +
++		// 	str[4] * Z_L(33 * 33 * 33) +
++		// 	str[5] * Z_L(33 * 33) +
++		// 	str[6] * Z_L(33) +
++		// 	str[7];
++		__m256i vectorizedStr1 = _mm256_set_epi64x(
++            (uint64_t)str[0],
++            (uint64_t)str[1],
++            (uint64_t)str[2],
++            (uint64_t)str[3]
++        );
++		__m256i vectorizedStr2 = _mm256_set_epi64x(
++            (uint64_t)str[4],
++            (uint64_t)str[5],
++            (uint64_t)str[6],
++            (uint64_t)str[7]
++        );
++		mul_result1 = _mm256_mul_epu32(vectorizedStr1, vectorizedConst);
++		mul_result2 = _mm256_mul_epu32(vectorizedStr2, vectorizedConst);
++		hash = hash*33*33*33*33UL;
++		hash += _mm256_extract_epi64(mul_result1, 0) + _mm256_extract_epi64(mul_result1, 1) + _mm256_extract_epi64(mul_result1, 2) + _mm256_extract_epi64(mul_result1, 3);
++		hash = hash*33*33*33*33UL;
++		hash += _mm256_extract_epi64(mul_result2, 0) + _mm256_extract_epi64(mul_result2, 1) + _mm256_extract_epi64(mul_result2, 2) + _mm256_extract_epi64(mul_result2, 3);
+ # endif
+ 	}
+ 	if (len >= 4) {

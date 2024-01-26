@@ -1,0 +1,86 @@
+diff --git a/Zend/zend_string.h b/Zend/zend_string.h
+index 910e2eed25..28d516a0aa 100644
+--- a/Zend/zend_string.h
++++ b/Zend/zend_string.h
+@@ -462,6 +462,10 @@ static zend_always_inline bool zend_string_starts_with_ci(const zend_string *str
+ static zend_always_inline zend_ulong zend_inline_hash_func(const char *str, size_t len)
+ {
+ 	zend_ulong hash = Z_UL(5381);
++	__m128i djbx33 = _mm_set_epi16(0, 0, 0, 0, 1, 33, 33, 33 * 33);
++	/* low:  str[0] * Z_L(33 * 33 * 33) + str[1] * Z_L(33 * 33) */
++    __m128i low, product, string;
++	const __m128i zero = _mm_setzero_si128();
+ 
+ #if defined(_WIN32) || defined(__i386__) || defined(__x86_64__) || defined(__aarch64__)
+ 	/* Version with multiplication works better on modern CPU */
+@@ -485,27 +489,52 @@ static zend_always_inline zend_ulong zend_inline_hash_func(const char *str, size
+ 			((chunk >> (8 * 6)) & 0xff) * 33 +
+ 			((chunk >> (8 * 7)) & 0xff);
+ # else
+-		hash =
+-			hash   * Z_L(33 * 33 * 33 * 33) +
+-			str[0] * Z_L(33 * 33 * 33) +
+-			str[1] * Z_L(33 * 33) +
+-			str[2] * Z_L(33) +
+-			str[3];
+-		hash =
+-			hash   * Z_L(33 * 33 * 33 * 33) +
+-			str[4] * Z_L(33 * 33 * 33) +
+-			str[5] * Z_L(33 * 33) +
+-			str[6] * Z_L(33) +
+-			str[7];
++		// hash =
++		// 	hash   * Z_L(33 * 33 * 33 * 33) +
++		// 	str[0] * Z_L(33 * 33 * 33) +
++		// 	str[1] * Z_L(33 * 33) +
++		// 	str[2] * Z_L(33) +
++		// 	str[3];
++		// hash =
++		// 	hash   * Z_L(33 * 33 * 33 * 33) +
++		// 	str[4] * Z_L(33 * 33 * 33) +
++		// 	str[5] * Z_L(33 * 33) +
++		// 	str[6] * Z_L(33) +
++		// 	str[7];
++		string = _mm_loadu_si64((__m128i*)str);
++
++        string = _mm_unpacklo_epi8 (string, zero);
++
++        low = _mm_madd_epi16(string, djbx33);
++        product = _mm_srli_si128(low, 4);
++        product = _mm_add_epi32(low, product);
++        low = _mm_slli_epi32(low, 5);
++        product = _mm_add_epi32(product, low);
++        hash = hash * 33 * 33 * 33 * 33UL + _mm_cvtsi128_si32(product);
++
++        string = _mm_srli_si128(string, 8);
++
++        low = _mm_madd_epi16(string, djbx33);
++        product = _mm_srli_si128(low, 4);
++        product = _mm_add_epi32(low, product);
++        low = _mm_slli_epi32(low, 5);
++        product = _mm_add_epi32(product, low);
++        hash = hash * 33 * 33 * 33 * 33UL + _mm_cvtsi128_si32(product);
+ # endif
+ 	}
+ 	if (len >= 4) {
+-		hash =
+-			hash   * Z_L(33 * 33 * 33 * 33) +
+-			str[0] * Z_L(33 * 33 * 33) +
+-			str[1] * Z_L(33 * 33) +
+-			str[2] * Z_L(33) +
+-			str[3];
++		string = _mm_loadu_si64((__m128i*)str);
++		string = _mm_unpacklo_epi8 (string, zero);
++		low = _mm_madd_epi16(string, djbx33);
++		product = _mm_srli_si128(low, 4);
++		product = _mm_add_epi32(low, product);
++		hash = hash * 33 * 33 * 33 * 33UL + _mm_cvtsi128_si32(product);
++		// hash =
++		// 	hash   * Z_L(33 * 33 * 33 * 33) +
++		// 	str[0] * Z_L(33 * 33 * 33) +
++		// 	str[1] * Z_L(33 * 33) +
++		// 	str[2] * Z_L(33) +
++		// 	str[3];
+ 		len -= 4;
+ 		str += 4;
+ 	}
