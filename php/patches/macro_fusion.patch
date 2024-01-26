@@ -1,0 +1,124 @@
+diff --git a/ext/opcache/jit/zend_jit_x86.dasc b/ext/opcache/jit/zend_jit_x86.dasc
+index d4a87d068c..cf30864cfc 100644
+--- a/ext/opcache/jit/zend_jit_x86.dasc
++++ b/ext/opcache/jit/zend_jit_x86.dasc
+@@ -1975,8 +1975,8 @@ static int zend_jit_undefined_offset_stub(dasm_State **Dst)
+ 	|.endif
+ 	|	mov r0, EX->opline
+ 	|	mov ecx, dword OP:r0->result.var
+-	|	cmp byte OP:r0->op2_type, IS_CONST
+ 	|	SET_Z_TYPE_INFO FP + r1, IS_NULL
++	|	cmp byte OP:r0->op2_type, IS_CONST
+ 	|	jne >2
+ 	|.if X64
+ 		|	movsxd r1, dword OP:r0->op2.constant
+@@ -2035,8 +2035,8 @@ static int zend_jit_undefined_index_stub(dasm_State **Dst)
+ 	|.endif
+ 	|	mov r0, EX->opline
+ 	|	mov ecx, dword OP:r0->result.var
+-	|	cmp byte OP:r0->op2_type, IS_CONST
+ 	|	SET_Z_TYPE_INFO FP + r1, IS_NULL
++	|	cmp byte OP:r0->op2_type, IS_CONST
+ 	|	jne >2
+ 	|.if X64
+ 		|	movsxd r1, dword OP:r0->op2.constant
+@@ -5180,8 +5180,8 @@ static int zend_jit_long_math_helper(dasm_State    **Dst,
+ 				|	jae >1
+ 				|.cold_code
+ 				|1:
+-				|	cmp r1, 0
+ 				|	mov Ra(result_reg), 0
++				|	cmp r1, 0
+ 				|	jg >1
+ 				zend_jit_invalidate_var_if_necessary(Dst, op1_type, op1_addr, op1);
+ 				zend_jit_invalidate_var_if_necessary(Dst, op2_type, op2_addr, op2);
+@@ -6594,8 +6594,8 @@ static int zend_jit_assign_dim(dasm_State **Dst, const zend_op *opline, uint32_t
+ 		|2:
+ 		|	SET_EX_OPLINE opline, r0
+ 		|	EXT_CALL zend_jit_prepare_assign_dim_ref, r0
+-		|	test r0, r0
+ 		|	mov FCARG1a, r0
++		|	test r0, r0
+ 		|	jne >1
+ 		|	jmp ->exception_handler_undef
+ 		|.code
+@@ -6806,8 +6806,8 @@ static int zend_jit_assign_dim_op(dasm_State **Dst, const zend_op *opline, uint3
+ 		|.cold_code
+ 		|2:
+ 		|	EXT_CALL zend_jit_prepare_assign_dim_ref, r0
+-		|	test r0, r0
+ 		|	mov FCARG1a, r0
++		|	test r0, r0
+ 		|	jne >1
+ 		|	jmp ->exception_handler_undef
+ 		|.code
+@@ -8671,8 +8671,8 @@ static int zend_jit_bool_jmpznz(dasm_State **Dst, const zend_op *opline, uint32_
+ 			if (op1_info & MAY_BE_UNDEF) {
+ 				if (op1_info & MAY_BE_ANY) {
+ 					if (set_delayed) {
+-						|	CMP_ZVAL_TYPE op1_addr, IS_UNDEF
+ 						|	SET_ZVAL_TYPE_INFO res_addr, eax
++						|	CMP_ZVAL_TYPE op1_addr, IS_UNDEF
+ 						|	jz >1
+ 					} else {
+ 						|	IF_ZVAL_TYPE op1_addr, IS_UNDEF, >1
+@@ -9062,8 +9062,8 @@ static int zend_jit_push_call_frame(dasm_State **Dst, const zend_op *opline, con
+ 
+ 		|	// if (EXPECTED(ZEND_USER_CODE(func->type))) {
+ 		if (!is_closure) {
+-			|	test byte [r0 + offsetof(zend_function, type)], 1
+ 			|	mov FCARG1a, used_stack
++			|	test byte [r0 + offsetof(zend_function, type)], 1
+ 			|	jnz >1
+ 		} else {
+ 			|	mov FCARG1a, used_stack
+@@ -9965,8 +9965,8 @@ static int zend_jit_do_fcall(dasm_State **Dst, const zend_op *opline, const zend
+ 					|	mov FCARG1a, RX
+ 				}
+ 				|	EXT_CALL zend_jit_deprecated_helper, r0
+-				|	test al, al
+ 				|	mov r0, EX:RX->func // reload
++				|	test al, al
+ 				|	jne >1
+ 				|	jmp ->exception_handler
+ 				|.code
+@@ -10192,8 +10192,8 @@ static int zend_jit_do_fcall(dasm_State **Dst, const zend_op *opline, const zend
+ 			|	lea r1, [FP + r1 + (ZEND_CALL_FRAME_SLOT * sizeof(zval))]
+ 			|2:
+ 			|	SET_Z_TYPE_INFO r1, IS_UNDEF
+-			|	sub edx, 1
+ 			|	lea r1, [r1 + 16]
++			|	sub edx, 1
+ 			|	jne <2
+ 			|3:
+ 		}
+@@ -10261,8 +10261,8 @@ static int zend_jit_do_fcall(dasm_State **Dst, const zend_op *opline, const zend
+ 						|	mov FCARG1a, RX
+ 					}
+ 					|	EXT_CALL zend_jit_deprecated_helper, r0
+-					|	test al, al
+ 					|	mov r0, EX:RX->func // reload
++					|	test al, al
+ 					|	jne >1
+ 					|	jmp ->exception_handler
+ 					|.code
+@@ -11514,8 +11514,8 @@ static int zend_jit_leave_func(dasm_State          **Dst,
+ 		return 1;
+ 	} else {
+ 		|	// if (EG(exception))
+-		|	MEM_CMP_ZTS aword, executor_globals, exception, 0, r0
+ 		|	LOAD_IP
++		|	MEM_CMP_ZTS aword, executor_globals, exception, 0, r0
+ 		|	jne ->leave_throw_handler
+ 		|	// opline = EX(opline) + 1
+ 		|	ADD_IP sizeof(zend_op)
+@@ -12164,8 +12164,8 @@ static int zend_jit_fetch_dim(dasm_State    **Dst,
+ 			|	SET_EX_OPLINE opline, r0
+ 		}
+ 		|	EXT_CALL zend_jit_prepare_assign_dim_ref, r0
+-		|	test r0, r0
+ 		|	mov FCARG1a, r0
++		|	test r0, r0
+ 		|	jne >1
+ 		|	jmp ->exception_handler_undef
+ 		|.code
